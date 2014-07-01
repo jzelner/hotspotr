@@ -50,18 +50,24 @@ hotspot_map <- function(in_df, fn, color_samples = 100, p = 0.1, dim = in_dim, b
 	colors <- append(colors, cr(length(sq)-3)) 
 	colors <- append(colors, c("red3", "red4"))
 
+	pvals <- append(-1,append(seq(0.0,1.0,0.025),1.25))
+	color_df$pval <- rep("",nrow(color_df))
+
 	current_index <- 1
 	if (sum(data_df$score < sq[1]) > 0) {
 		color_df$score[data_df$score < sq[1]] <- current_index
+		color_df$pval[data_df$score < sq[1]] <- pvals[1]
+
 		included_colors <- append(included_colors, colors[1])
 		current_index <- current_index + 1
 	}
-	
-	
+
+
 	for (i in 1:(length(sq)-1)) {
 		score_indices <- (data_df$score >= sq[i]) & (data_df$score < sq[i+1])
 		if (sum(score_indices) > 0) {
 			color_df$score[score_indices] <- current_index
+			color_df$pval[score_indices] <- pvals[i+1]
 			included_colors <- append(included_colors, colors[i+1])
 			current_index <- current_index + 1
 		}
@@ -69,11 +75,14 @@ hotspot_map <- function(in_df, fn, color_samples = 100, p = 0.1, dim = in_dim, b
 
 	if (sum(data_df$score > sq[length(sq)]) > 0) {
 		color_df$score[data_df$score > sq[length(sq)]] <- current_index
+		color_df$pval[data_df$score > sq[length(sq)]] <- pvals[length(pvals)]
+
 		included_colors <- append(included_colors, colors[length(colors)])
 	}	
 
 
-	
+
+	color_df$pval <- as.numeric(color_df$pval)
 	color_df$score <- as.factor(color_df$score)
 	return(list("data" = color_df, "colors" = included_colors, "rawscore" = data_df))
 }	
@@ -126,7 +135,6 @@ hotspot_area <- function(df, datad, pv) {
 		x_df <- subset(hs_rows, y >= y_vals[i] & y <= y_vals[i+1])
 		x_vals <- sort(unique(x_df$x))
 		for (j in 1:(length(x_vals)-1)) {
-			print(datad$x >= x_vals[j])
 			case_indices <- append(case_indices, all_indices[datad$x >= x_vals[j] & datad$x <= x_vals[j+1] & datad$y >= y_vals[i] & datad$y <= y_vals[i+1]])
 		}
 	}
