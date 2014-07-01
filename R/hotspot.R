@@ -109,6 +109,13 @@ random_hotspot <- function(x,y, h2, in_p, out_p) {
 
 }
 
+#' Given a map with a single hotspot, extract the squares with an approximate p-value
+#' greater than or equal to a given threshhold
+#'
+#' @param df color dataframe output from make_hotspot
+#' @param datad data frame containing data points
+#' @param pv threshhold p-value
+#' @export
 hotspot_area <- function(df, datad, pv) {
 	case_indices <- c()
 	all_indices <- 1:nrow(datad)

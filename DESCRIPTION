@@ -1,5 +1,5 @@
 Package: hotspot
-Title: Tools for splitting, applying and combining data
+Title: Tools for generating hotspot maps in R
 Description: 
 Version: 0.01
 Author: Jon Zelner <jzelner@gmail.com>
