@@ -77,6 +77,37 @@ hotspot_map <- function(in_df, fn, color_samples = 100, p = 0.1, dim = in_dim, b
 	color_df$score <- as.factor(color_df$score)
 	return(list("data" = color_df, "colors" = included_colors, "rawscore" = data_df))
 }	
+#' Generate a random hotspot.
+#'
+#' Given a set of points, generate a square hotspot with width h in the middle. 
+#' Useful for testing whether a map based on a given set of points will work. 
+#' Specify the within-spot risk (in_p) and outside-spot risk (out_p), so that the 
+#' relative risk (RR) is equal to in_p / out_p.
+
+#' @param x vector of x coordinates for input points
+#' @param y vector of y coordinates for input points
+#' @param h2 width of hotspot window
+#' @param in_p risk of being in case group inside hotspot
+#' @param out_p risk of being in case group outside hotspot
+#' @export
+random_hotspot <- function(x,y, h2, in_p, out_p) {
+	
+	h <- h2/2
+	mid_x <- (max(x) + min(x))/2
+	mid_y <- (max(y) + min(y))/2
+
+	hp_x <- c(mid_x-h, mid_x+h)
+	hp_y <- c(mid_y-h, mid_y+h)
+
+	in_spot <- (x > hp_x[1] & x < hp_x[2]) & (y > hp_y[1] & y < hp_y[2])
+
+	z <- rbinom(length(x), 1, out_p)
+	z[in_spot] <- rbinom(sum(in_spot), 1, in_p)
+
+	vals <- list(z = z, coord = c(hp_x, hp_y) )
+	return(vals)
+
+}
 
 hotspot_area <- function(df, datad, pv) {
 	case_indices <- c()

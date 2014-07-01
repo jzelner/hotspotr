@@ -1,6 +1,7 @@
 require(pracma)
 
-#Get distance of every point in data from fixed point (cx, cy)
+#' Get distance of every point in data from fixed point (cx, cy)
+#' @export
 all_dist <- function(x, y, cx,cy) {
 	return(sqrt((x-cx)**2 + (y-cy)**2))
 }
@@ -14,11 +15,24 @@ risk_grid <- function(minX, maxX, minY, maxY, dim) {
 	return(df)
 }
 
+#' Create a square grid of points of the pre-specified dimension
+#'
+#' @param x vector of x coordinates of data points
+#' @param y vector of y coordinates of data points
+#' @param dim dimension of resulting square grid
+#' @export
 grid_from_points <- function(x,y, dim) {
 	rg <- risk_grid(min(x), max(x), min(y), max(y), dim)
 	return(rg)
 }
 
+#' Calculate an empirical cdf of point distances relative to a fixed point.
+#'
+#' @param x vector of x coordinates of data points
+#' @param y vector of y coordinates of data points
+#' @param cx fixed point x coordinate
+#' @param cy fixed point y coordinate
+#' @export
 fixed_point_cdf <- function(x, y, cx, cy) {
 	d <- all_dist(x,y,cx,cy)
 	dcdf <- ecdf(d)
@@ -34,6 +48,15 @@ corner_points <- function(x, y, h = 0.1) {
 	return(data.frame(x = xout, y = yout))
 }
 
+#' Surround a set of points with a circle of points at a pre-specified
+#' radius.
+#'
+#' @param x vector of x coordinates for points to surround
+#' @param y vector of y coordinates for points to surround
+#' @param np number of external points
+#' @param r radius of circle, measured in distance from center of the 
+#' set of points.
+#' @export
 circle_points <- function(x, y, np = 6, r = 0.5) {
 	x <- na.omit(x)
 	y <- na.omit(y)
@@ -100,6 +123,13 @@ adaptive_dbm_score <- function(x, y, dim = 100, p0 = 0.1) {
 
 }
 
+#' Generate a scored map of the local proportion of cases.
+#'
+#' Returns a data frame with x and y coordinates of grid squares of 
+#' pre-specified dimension and the dbm score for each square.
+#'
+#' @param df data frame containing (x,y) coordinates of cases and case control status (z: 0,1)
+#' @export
 dbm_score_rr <- function(df, dim = 100, h = 2.0, p = 0.1, bounds = NULL) {
 
 	x <- df$x
