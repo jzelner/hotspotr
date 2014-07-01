@@ -9,7 +9,7 @@
 #' @param bounds gives the coordinates of a bounding box to restrict the map to (otherwise uses the extreme values of points in in_df) 
 #' @param pbar show a progress bar while calculating the color scale. 
 #' @export
-hotspot_map <- function(in_df, fn, color_samples = 100, p = 0.1, dim = in_dim, bounds = NULL, pbar = TRUE) {
+hotspot_map <- function(in_df, fn, color_samples = 100, p = 0.005, dim = in_dim, bounds = NULL, pbar = TRUE) {
 
 	data_df <- fn(in_df)
 

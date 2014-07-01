@@ -130,7 +130,7 @@ adaptive_dbm_score <- function(x, y, dim = 100, p0 = 0.1) {
 #'
 #' @param df data frame containing (x,y) coordinates of cases and case control status (z: 0,1)
 #' @export
-dbm_score_rr <- function(df, dim = 100, h = 2.0, p = 0.1, bounds = NULL) {
+dbm_score_rr <- function(df, dim = 100, h = 0.005, p = 0.005, bounds = NULL) {
 
 	x <- df$x
 	y <- df$y
