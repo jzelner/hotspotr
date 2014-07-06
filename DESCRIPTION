@@ -1,0 +1,9 @@
+Package: hotspotr
+Title: Tools for outbreak analysis in R
+Description: 
+Imports:
+    ggplot2
+Version: 0.01
+Author: Jon Zelner <jon@jonzelner.net>
+Maintainer: Jon Zelner <jon@jonzelner.net>
+License: MIT
