@@ -1,3 +1,10 @@
+#' hsmap
+#'
+#' Create a hotspot map object
+hsmap <- function(levels, colors) {
+	x <- structure(list(levels = levels, colors = colors), class = "hsmap")
+}
+
 #' Generate a hotspot map
 #'
 #' This function takes a function for computing some kind of spatial risk,
@@ -11,7 +18,7 @@
 #' @export
 hotspot_map <- function(in_df, fn, color_samples = 100, p = 0.005, dim = in_dim, bounds = NULL, pbar = TRUE) {
 
-	data_df <- fn(in_df)
+	data_df <- fn(in_df, p = p)
 
 	#Now repeat with the same dataset with case and control statuses randomized
 	random_df_in <- in_df
@@ -26,7 +33,7 @@ hotspot_map <- function(in_df, fn, color_samples = 100, p = 0.005, dim = in_dim,
 	for (i in 1:color_samples) {
 		#Randomly permute case/control labels
 		random_df_in$z <- sample(random_df_in$z)
-		random_df <- fn(random_df_in)
+		random_df <- fn(random_df_in, p = p)
 
 		min_scores <- append(min_scores, min(random_df$score))
 		max_scores <- append(max_scores, max(random_df$score))
