@@ -1,8 +1,45 @@
 #' hsmap
 #'
 #' Create a hotspot map object
-hsmap <- function(levels, colors) {
-	x <- structure(list(levels = levels, colors = colors), class = "hsmap")
+#' @export
+hsmap <- function(levels, colors, points) {
+	x <- structure(list(levels = levels, colors = colors, points = points), class = "hsmap")
+}
+
+#' plot.hsmap
+#'
+#' @param x object of type hsmap
+#' @export
+plot.hsmap <- function(x, point = TRUE, pointtype = c(20, 3), xlab = "Longitude", ylab = "Latitude", map = NULL) {
+
+	if (!is.null(map)) {
+		g <- map 
+	} else {
+		g <- ggplot() 
+	}
+
+	if (point == TRUE) {
+		g <- g + geom_point(aes(x = x$points$x, y = x$points$y, alpha = 0.01, shape = factor(x$points$z), size = 1)) + scale_shape_manual(values = c(pointtype[1],pointtype[2])) + scale_size_identity()
+	}
+
+
+	g <- g + geom_tile(aes(x =x, y = y, fill = score, alpha = 0.01), data = x$levels) + scale_fill_manual(values = x$colors) + coord_cartesian(xlim = c(min(x$levels$x), max(x$levels$x)), ylim = c(min(x$levels$y), max(x$levels$y))) + xlab(xlab) + ylab(xlab)  
+
+
+	g <- g + theme(axis.line=element_blank(),
+      axis.text.x=element_blank(),
+      axis.text.y=element_blank(),
+      axis.ticks=element_blank(),
+      axis.title.x=element_blank(),
+      axis.title.y=element_blank(),
+      legend.position="none",
+      panel.background=element_blank(),
+      panel.border=element_blank(),
+      panel.grid.major=element_blank(),
+      panel.grid.minor=element_blank(),
+      plot.background=element_blank()) + scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0)) + guides(fill = FALSE, alpha = FALSE) 
+
+	print(g)
 }
 
 #' Generate a hotspot map
@@ -91,7 +128,7 @@ hotspot_map <- function(in_df, fn, color_samples = 100, p = 0.005, dim = in_dim,
 
 	color_df$pval <- as.numeric(color_df$pval)
 	color_df$score <- as.factor(color_df$score)
-	return(list("data" = color_df, "colors" = included_colors, "rawscore" = data_df))
+	return(hsmap(color_df, included_colors, in_df))
 }	
 #' Generate a random hotspot.
 #'

@@ -3,7 +3,7 @@
 \alias{hotspot_map}
 \title{Generate a hotspot map}
 \usage{
-hotspot_map(in_df, fn, color_samples = 100, p = 0.1, dim = in_dim,
+hotspot_map(in_df, fn, color_samples = 100, p = 0.005, dim = in_dim,
   bounds = NULL, pbar = TRUE)
 }
 \arguments{
