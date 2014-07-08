@@ -1,5 +1,5 @@
 Package: hotspotr
-Title: Tools for outbreak analysis in R
+Title: Tools for hotspot analysis in R
 Description: 
 Imports:
     ggplot2
