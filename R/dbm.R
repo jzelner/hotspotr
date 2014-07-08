@@ -1,4 +1,15 @@
-require(pracma)
+meshgrid <- function (x, y = x) 
+{
+    if (!is.numeric(x) || !is.numeric(y)) 
+        stop("Arguments 'x' and 'y' must be numeric vectors.")
+    x <- c(x)
+    y <- c(y)
+    n <- length(x)
+    m <- length(y)
+    X <- matrix(rep(x, each = m), nrow = m, ncol = n)
+    Y <- matrix(rep(y, times = n), nrow = m, ncol = n)
+    return(list(X = X, Y = Y))
+}
 
 #' Get distance of every point in data from fixed point (cx, cy)
 #' @export
@@ -242,4 +253,81 @@ adaptive_dbm_score_rr <- function(df, dim = 100, h = 2.0, p0 = 0.1) {
 	
 	return(rd)
 
+}
+
+point_index <-function(x,y, grid_x, grid_y) {
+	xtable <- table(grid_x)
+	xspacing <- as.numeric(xtable[1])
+
+	ytable <- table(grid_y)
+
+	gx <- sort(unique(grid_x))
+	mx <- min(gx)
+	gy <- sort(unique(grid_y))
+	my <- min(gy)
+
+	xwidth <- gx[2]-gx[1]
+	ywidth <- gy[2]-gy[1]
+	xindex <- floor((x-mx) / xwidth) + 1
+	yindex <- floor((y-my) / ywidth) + 1
+	row <- ((xindex-1)*xspacing)+yindex
+	return(list(x = xindex, y = yindex, row = row))
+}
+
+in_cluster <- function(x, y, grid_x, grid_y, pval, cutoff = 0.95) {
+
+	#First get the indices of each point on the map
+	map_indices <- point_index(x, y, grid_x, grid_y)$row
+
+	in_cluster <- as.numeric(pval[map_indices] >= cutoff)
+
+	return(in_cluster)
+}
+
+#' cluster_points
+#'
+#' @export
+cluster_points <- function(x, cutoff = 0.95) UseMethod("cluster_points")
+
+#' cluster_points.hsmap
+#'
+#' Get points within cluster areas, defined by threshold
+#' @param x fitted hsmap object
+#' @param cutoff pvalue cutoff for cluster membership
+#' @export
+cluster_points.hsmap <- function(x, cutoff = 0.95) {
+	rx <- x$points
+	rx$in_cluster <- in_cluster(x$points$x, x$points$y, x$levels$x, x$levels$y, x$levels$pval, cutoff = cutoff)
+	return(rx)
+}
+
+#' within_cluster_rr
+#'
+#' returns a fitted binomial glm predicting the likelihood of being a case, conditional on cluster membership
+#' @export
+within_cluster_rr <- function(x, cutoff = 0.95) UseMethod("within_cluster_rr")
+
+#' within_cluster_rr
+#'
+#' @export
+within_cluster_rr.hsmap <- function(x, cutoff = 0.95) {
+	cp <- cluster_points(x, cutoff = cutoff)
+	m <- glm(z ~ in_cluster, data = cp, family=binomial(link = log))
+	return(m)
+}
+
+#' summary.hsmap
+#' 
+#' Summarized a fitted hotspot map
+#' @export
+summary.hsmap <- function(x, cutoff = 0.95) {
+	cp <- cluster_points(x, cutoff = cutoff)
+	m <- glm(z ~ in_cluster, data = cp, family=binomial(link = log))
+	se <- summary(m)$coefficients[,2]
+	low_ci <- exp(summary(m)$coefficients[,1] - 1.93*se)
+	high_ci <- exp(summary(m)$coefficients[,1] + 1.93*se)
+
+	print("Summary of hsmap object")
+	print(sprintf("%d within-cluster points of %d total.", sum(cp$in_cluster), nrow(cp)))
+	print(sprintf("RR of cases in-cluster to cases out-cluster = %2.3f. CI = (%2.3f,%2.3f)", exp(coef(m)[2]), low_ci[2], high_ci[2]))
 }

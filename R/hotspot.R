@@ -3,27 +3,29 @@
 #' Create a hotspot map object
 #' @export
 hsmap <- function(levels, colors, points) {
-	x <- structure(list(levels = levels, colors = colors, points = points), class = "hsmap")
+	x <- structure(list(levels = levels, colors = colors, points = points), class = "hsmap", fname = NULL)
 }
 
 #' plot.hsmap
 #'
 #' @param x object of type hsmap
 #' @export
-plot.hsmap <- function(x, point = TRUE, pointtype = c(20, 3), xlab = "Longitude", ylab = "Latitude", map = NULL) {
+plot.hsmap <- function(x, point = TRUE, pointtype = c(20, 3), xlab = "Longitude", ylab = "Latitude", map = NULL, fname = NULL) {
 
 	if (!is.null(map)) {
 		g <- map 
 	} else {
-		g <- ggplot() 
+		.e <- environment()
+		g <- ggplot(environment = .e) + coord_cartesian(xlim = c(min(x$levels$x), max(x$levels$x)), ylim = c(min(x$levels$y), max(x$levels$y))) + scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0)) 
 	}
 
 	if (point == TRUE) {
-		g <- g + geom_point(aes(x = x$points$x, y = x$points$y, alpha = 0.01, shape = factor(x$points$z), size = 1)) + scale_shape_manual(values = c(pointtype[1],pointtype[2])) + scale_size_identity()
+		point_df <- data.frame(x = x$points$x, y = x$points$y, z = as.factor(x$points$z), size = 1)
+		g <- g + geom_point(aes(x = x, y = y, alpha = 0.01, shape = z, size = 1), data = point_df) + scale_shape_manual(values = c(pointtype[1],pointtype[2])) + scale_size_identity()
 	}
 
 
-	g <- g + geom_tile(aes(x =x, y = y, fill = score, alpha = 0.01), data = x$levels) + scale_fill_manual(values = x$colors) + coord_cartesian(xlim = c(min(x$levels$x), max(x$levels$x)), ylim = c(min(x$levels$y), max(x$levels$y))) + xlab(xlab) + ylab(xlab)  
+	g <- g + geom_tile(aes(x =x, y = y, fill = score, alpha = 0.01), data = x$levels) + scale_fill_manual(values = x$colors) + xlab(xlab) + ylab(xlab)  
 
 
 	g <- g + theme(axis.line=element_blank(),
@@ -37,9 +39,13 @@ plot.hsmap <- function(x, point = TRUE, pointtype = c(20, 3), xlab = "Longitude"
       panel.border=element_blank(),
       panel.grid.major=element_blank(),
       panel.grid.minor=element_blank(),
-      plot.background=element_blank()) + scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0)) + guides(fill = FALSE, alpha = FALSE) 
+      plot.background=element_blank()) + guides(fill = FALSE, alpha = FALSE) 
 
-	print(g)
+	if (!is.null(fname)) {
+		ggsave(fname)
+	} else {
+		return(g)
+	}
 }
 
 #' Generate a hotspot map
@@ -55,7 +61,7 @@ plot.hsmap <- function(x, point = TRUE, pointtype = c(20, 3), xlab = "Longitude"
 #' @export
 hotspot_map <- function(in_df, fn, color_samples = 100, p = 0.005, dim = in_dim, bounds = NULL, pbar = TRUE) {
 
-	data_df <- fn(in_df, p = p)
+	data_df <- fn(in_df, p = p, bounds = bounds)
 
 	#Now repeat with the same dataset with case and control statuses randomized
 	random_df_in <- in_df
