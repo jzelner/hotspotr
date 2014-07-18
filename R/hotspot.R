@@ -21,7 +21,7 @@ plot.hsmap <- function(x, point = TRUE, pointtype = c(20, 3), xlab = "Longitude"
 
 	if (point == TRUE) {
 		point_df <- data.frame(x = x$points$x, y = x$points$y, z = as.factor(x$points$z), size = 1)
-		g <- g + geom_point(aes(x = x, y = y, alpha = 0.01, shape = z, size = 1), data = point_df) + scale_shape_manual(values = c(pointtype[1],pointtype[2])) + scale_size_identity()
+		g <- g + geom_point(aes(x = x, y = y, shape = z, size = 1), data = point_df) + scale_shape_manual(values = c(pointtype[1],pointtype[2])) + scale_size_identity()
 	}
 
 
@@ -47,6 +47,38 @@ plot.hsmap <- function(x, point = TRUE, pointtype = c(20, 3), xlab = "Longitude"
 		return(g)
 	}
 }
+
+get_colorscale <- function(low_colors = c("blue4", "blue3"), high_colors = c("red3", "red4"), inner_range = c("turquoise", "orange")) {
+	cr <- colorRampPalette(inner_range)
+	inner_colors <- cr(90)
+	all_colors <- append(low_colors[1], append(rep(low_colors[2],4), inner_colors))
+
+	all_colors <- append(append(all_colors, rep(high_colors[1],4)), high_colors[2])
+
+	return(all_colors)
+}
+
+get_score_percentile <- function(scoredist, scores) {
+	d <- ecdf(scoredist)
+	p <- round(d(scores),2)
+	p[p == 0] <- 0.01
+	return(p)
+}
+
+make_hsmap <- function(data_df, scores, in_df) {
+		
+		cs <- get_colorscale()
+
+		pval <- get_score_percentile(scores, data_df$score)
+
+		data_df$pval <- pval
+		data_df$score <- as.factor(pval)
+
+		included_colors <- cs[sort(unique(pval*100))]
+
+		return(hsmap(data_df, included_colors, in_df))
+}
+
 
 #' Generate a hotspot map
 #'
@@ -88,53 +120,10 @@ hotspot_map <- function(in_df, fn, color_samples = 100, p = 0.005, dim = in_dim,
 		close(pb)
 	}
 
-	all_scores <- c(min_scores, max_scores)
-	# print(all_scores)
-	color_df <- data_df
-	sq <- quantile(all_scores, probs = seq(0.0,1.0,0.025))
+	scores <- c(min_scores, max_scores)
+	hm <- make_hsmap(data_df, scores, in_df)
 
-	included_colors <- c()
-	cr <- colorRampPalette(c("turquoise", "orange"))
-
-	colors <- c("blue4", "blue3")
-	colors <- append(colors, cr(length(sq)-3)) 
-	colors <- append(colors, c("red3", "red4"))
-
-	pvals <- append(-1,append(seq(0.0,1.0,0.025),1.25))
-	color_df$pval <- rep("",nrow(color_df))
-
-	current_index <- 1
-	if (sum(data_df$score < sq[1]) > 0) {
-		color_df$score[data_df$score < sq[1]] <- current_index
-		color_df$pval[data_df$score < sq[1]] <- pvals[1]
-
-		included_colors <- append(included_colors, colors[1])
-		current_index <- current_index + 1
-	}
-
-
-	for (i in 1:(length(sq)-1)) {
-		score_indices <- (data_df$score >= sq[i]) & (data_df$score < sq[i+1])
-		if (sum(score_indices) > 0) {
-			color_df$score[score_indices] <- current_index
-			color_df$pval[score_indices] <- pvals[i+1]
-			included_colors <- append(included_colors, colors[i+1])
-			current_index <- current_index + 1
-		}
-	}
-
-	if (sum(data_df$score > sq[length(sq)]) > 0) {
-		color_df$score[data_df$score > sq[length(sq)]] <- current_index
-		color_df$pval[data_df$score > sq[length(sq)]] <- pvals[length(pvals)]
-
-		included_colors <- append(included_colors, colors[length(colors)])
-	}	
-
-
-
-	color_df$pval <- as.numeric(color_df$pval)
-	color_df$score <- as.factor(color_df$score)
-	return(hsmap(color_df, included_colors, in_df))
+	return(hm)
 }	
 #' Generate a random hotspot.
 #'
