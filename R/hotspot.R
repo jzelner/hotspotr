@@ -13,10 +13,10 @@ hsmap <- function(levels, colors, points) {
 plot.hsmap <- function(x, point = TRUE, pointtype = c(20, 3), xlab = "Longitude", ylab = "Latitude", map = NULL, fname = NULL) {
 
 	if (!is.null(map)) {
-		g <- map 
+		g <- map
 	} else {
 		.e <- environment()
-		g <- ggplot(environment = .e) + coord_cartesian(xlim = c(min(x$levels$x), max(x$levels$x)), ylim = c(min(x$levels$y), max(x$levels$y))) + scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0)) 
+		g <- ggplot(environment = .e) + coord_cartesian(xlim = c(min(x$levels$x), max(x$levels$x)), ylim = c(min(x$levels$y), max(x$levels$y))) + scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 0))
 	}
 
 	if (point == TRUE) {
@@ -25,7 +25,7 @@ plot.hsmap <- function(x, point = TRUE, pointtype = c(20, 3), xlab = "Longitude"
 	}
 
 
-	g <- g + geom_tile(aes(x =x, y = y, fill = score, alpha = 0.01), data = x$levels) + scale_fill_manual(values = x$colors) + xlab(xlab) + ylab(xlab)  
+	g <- g + geom_tile(aes(x =x, y = y, fill = score, alpha = 0.01), data = x$levels) + scale_fill_manual(values = x$colors) + xlab(xlab) + ylab(xlab)
 
 
 	g <- g + theme(axis.line=element_blank(),
@@ -39,7 +39,7 @@ plot.hsmap <- function(x, point = TRUE, pointtype = c(20, 3), xlab = "Longitude"
       panel.border=element_blank(),
       panel.grid.major=element_blank(),
       panel.grid.minor=element_blank(),
-      plot.background=element_blank()) + guides(fill = FALSE, alpha = FALSE) 
+      plot.background=element_blank()) + guides(fill = FALSE, alpha = FALSE)
 
 	if (!is.null(fname)) {
 		ggsave(fname)
@@ -66,7 +66,7 @@ get_score_percentile <- function(scoredist, scores) {
 }
 
 make_hsmap <- function(data_df, scores, in_df) {
-		
+
 		cs <- get_colorscale()
 
 		pval <- get_score_percentile(scores, data_df$score)
@@ -85,11 +85,11 @@ make_hsmap <- function(data_df, scores, in_df) {
 #' This function takes a function for computing some kind of spatial risk,
 #' calculates spatial densities and generates a color scale indicating which areas
 #' have a statistically significant concentration of cases.
-#' @param in_df data frame consisting of x and y coordinates of input data, and any 
+#' @param in_df data frame consisting of x and y coordinates of input data, and any
 #' other information used by the mapping function.
-#' @param fn mapping function that takes a data frame as input and returns a data frame #' with a grid of points of size dim x dim.  
-#' @param bounds gives the coordinates of a bounding box to restrict the map to (otherwise uses the extreme values of points in in_df) 
-#' @param pbar show a progress bar while calculating the color scale. 
+#' @param fn mapping function that takes a data frame as input and returns a data frame #' with a grid of points of size dim x dim.
+#' @param bounds gives the coordinates of a bounding box to restrict the map to (otherwise uses the extreme values of points in in_df)
+#' @param pbar show a progress bar while calculating the color scale.
 #' @export
 hotspot_map <- function(in_df, fn, color_samples = 100, p = 0.005, dim = in_dim, bounds = NULL, pbar = TRUE) {
 
@@ -124,12 +124,98 @@ hotspot_map <- function(in_df, fn, color_samples = 100, p = 0.005, dim = in_dim,
 	hm <- make_hsmap(data_df, scores, in_df)
 
 	return(hm)
-}	
+}
+
+#' Make a hotspot map using julia
+#' @export
+hotspot_map_julia <- function(in_df, jlpath = ".", outfilename = "tmpout.json") {
+	require("rjson")
+
+	max_x <- max(in_df$x)
+	min_x <- min(in_df$x)
+	max_y <- max(in_df$y)
+	min_y <- min(in_df$y)
+
+	out_df <- in_df
+	out_df$x = (in_df$x - min(in_df$x)) / (max(in_df$x) - min(in_df$x))
+	out_df$y = (in_df$y - min(in_df$y)) / (max(in_df$y) - min(in_df$y))
+
+
+	cmd <- "julia -e \'using Hotspot; z = Hotspot.hsmap_from_json(\"test.json\"); f = open(\"out.json\",\"w\"); write(f, z); close(f);\'"
+
+
+	write(toJSON(out_df), "test.json")
+	system(cmd)
+
+	map_d <- fromJSON(file="out.json")
+
+	data_df <- data.frame(x = ((max_x-min_x)*map_d[["x"]])+min_x, y = ((max_y-min_y)*map_d[["y"]])+min_y, score = map_d[["score"]])
+
+	scores <- c(map_d[["min"]], map_d[["max"]])
+
+	hm <- make_hsmap(data_df, scores, in_df)
+
+	return(hm)
+}
+
+#' Make multiple hotspot maps using julia
+#' @export
+batch_hotspot_map_julia <- function(in_maps, jlpath = ".", outfilename = "tmpout.json") {
+	require("rjson")
+	max_x_vals <- c()
+	min_x_vals <- c()
+	max_y_vals <- c()
+	min_y_vals <- c()
+
+	processed_maps <- list()
+	for (i in 1:length(in_maps)) {
+		in_df <- in_maps[[i]]
+		max_x <- max(in_df$x)
+		max_x_vals <- append(max_x_vals, max_x)
+		
+		min_x <- min(in_df$x)
+		min_x_vals <- append(min_x_vals, min_x)
+
+		max_y <- max(in_df$y)
+		max_y_vals <- append(max_y_vals, max_y)
+
+		min_y <- min(in_df$y)
+		min_y_vals <- append(min_y_vals, min_y)
+
+		out_df <- in_df
+		out_df$x = (in_df$x - min(in_df$x)) / (max(in_df$x) - min(in_df$x))
+		out_df$y = (in_df$y - min(in_df$y)) / (max(in_df$y) - min(in_df$y))
+		processed_maps[[i]] <- out_df
+	}
+
+	cmd <- "julia -e \'using Hotspot; z = Hotspot.hsmap_from_json(\"test.json\"); f = open(\"out.json\",\"w\"); write(f, z); close(f);\'"
+
+	write(toJSON(processed_maps), "test.json")
+	system(cmd)
+
+	map_list <- fromJSON(file="out.json")
+
+	return_maps <- list()
+	for (i in 1:length(map_list)) {
+		map_d <- map_list[[i]]
+
+		data_df <- data.frame(x = ((max_x-min_x)*map_d[["x"]])+min_x, y = ((max_y-min_y)*map_d[["y"]])+min_y, score = map_d[["score"]])
+
+		scores <- c(map_d[["min"]], map_d[["max"]])
+
+		return_maps[[i]] <- make_hsmap(data_df, scores, in_maps[[i]])
+	}
+
+	return(return_maps)
+}
+
+
+
 #' Generate a random hotspot.
 #'
-#' Given a set of points, generate a square hotspot with width h in the middle. 
-#' Useful for testing whether a map based on a given set of points will work. 
-#' Specify the within-spot risk (in_p) and outside-spot risk (out_p), so that the 
+#' Given a set of points, generate a square hotspot with width h in the middle.
+#' Useful for testing whether a map based on a given set of points will work.
+#' Specify the within-spot risk (in_p) and outside-spot risk (out_p), so that the
 #' relative risk (RR) is equal to in_p / out_p.
 
 #' @param x vector of x coordinates for input points
@@ -139,7 +225,7 @@ hotspot_map <- function(in_df, fn, color_samples = 100, p = 0.005, dim = in_dim,
 #' @param out_p risk of being in case group outside hotspot
 #' @export
 random_hotspot <- function(x,y, h2, in_p, out_p) {
-	
+
 	h <- h2/2
 	mid_x <- (max(x) + min(x))/2
 	mid_y <- (max(y) + min(y))/2
@@ -182,4 +268,3 @@ hotspot_area <- function(df, datad, pv) {
 	rdf$in_cluster[case_indices] <- 1
 	return(rdf)
 }
-
