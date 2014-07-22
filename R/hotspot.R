@@ -10,7 +10,7 @@ hsmap <- function(levels, colors, points) {
 #'
 #' @param x object of type hsmap
 #' @export
-plot.hsmap <- function(x, point = TRUE, pointtype = c(20, 3), xlab = "Longitude", ylab = "Latitude", map = NULL, fname = NULL) {
+plot.hsmap <- function(x, point = TRUE, caseonly = FALSE, pointtype = c(20, 3), xlab = "Longitude", ylab = "Latitude", map = NULL, fname = NULL) {
 
 	if (!is.null(map)) {
 		g <- map
@@ -20,7 +20,12 @@ plot.hsmap <- function(x, point = TRUE, pointtype = c(20, 3), xlab = "Longitude"
 	}
 
 	if (point == TRUE) {
+
 		point_df <- data.frame(x = x$points$x, y = x$points$y, z = as.factor(x$points$z), size = 1)
+
+		if (caseonly == TRUE) {
+			point_df <- subset(point_df, z == 1)
+		}
 		g <- g + geom_point(aes(x = x, y = y, shape = z, size = 1), data = point_df) + scale_shape_manual(values = c(pointtype[1],pointtype[2])) + scale_size_identity()
 	}
 
@@ -128,7 +133,7 @@ hotspot_map <- function(in_df, fn, color_samples = 100, p = 0.005, dim = in_dim,
 
 #' Make a hotspot map using julia
 #' @export
-hotspot_map_julia <- function(in_df, jlpath = ".", outfilename = "tmpout.json") {
+hotspot_map_julia <- function(in_df, r = 1.0, p = 0.005, dim = 100) {
 	require("rjson")
 
 	max_x <- max(in_df$x)
@@ -136,15 +141,18 @@ hotspot_map_julia <- function(in_df, jlpath = ".", outfilename = "tmpout.json") 
 	max_y <- max(in_df$y)
 	min_y <- min(in_df$y)
 
-	out_df <- in_df
-	out_df$x = (in_df$x - min(in_df$x)) / (max(in_df$x) - min(in_df$x))
-	out_df$y = (in_df$y - min(in_df$y)) / (max(in_df$y) - min(in_df$y))
+	out_d <- list()
+	out_d[["x"]] = (in_df$x - min(in_df$x)) / (max(in_df$x) - min(in_df$x))
+	out_d[["y"]] = (in_df$y - min(in_df$y)) / (max(in_df$y) - min(in_df$y))
+	out_d[["z"]] = as.numeric(as.character(in_df$z))
+	out_d[["r"]] = r
+	out_d[["p"]] = p
+	out_d[["dim"]] = dim
 
-
+	write(toJSON(out_d), "test.json")
+	
 	cmd <- "julia -e \'using Hotspot; z = Hotspot.hsmap_from_json(\"test.json\"); f = open(\"out.json\",\"w\"); write(f, z); close(f);\'"
 
-
-	write(toJSON(out_df), "test.json")
 	system(cmd)
 
 	map_d <- fromJSON(file="out.json")
@@ -160,7 +168,7 @@ hotspot_map_julia <- function(in_df, jlpath = ".", outfilename = "tmpout.json") 
 
 #' Make multiple hotspot maps using julia
 #' @export
-batch_hotspot_map_julia <- function(in_maps, jlpath = ".", outfilename = "tmpout.json") {
+batch_hotspot_map_julia <- function(in_maps, in_df, r = 1.0, p = 0.005, dim = 100) {
 	require("rjson")
 	max_x_vals <- c()
 	min_x_vals <- c()
@@ -182,10 +190,15 @@ batch_hotspot_map_julia <- function(in_maps, jlpath = ".", outfilename = "tmpout
 		min_y <- min(in_df$y)
 		min_y_vals <- append(min_y_vals, min_y)
 
-		out_df <- in_df
-		out_df$x = (in_df$x - min(in_df$x)) / (max(in_df$x) - min(in_df$x))
-		out_df$y = (in_df$y - min(in_df$y)) / (max(in_df$y) - min(in_df$y))
-		processed_maps[[i]] <- out_df
+		out_d <- list()
+		out_d[["x"]] = (in_df$x - min(in_df$x)) / (max(in_df$x) - min(in_df$x))
+		out_d[["y"]] = (in_df$y - min(in_df$y)) / (max(in_df$y) - min(in_df$y))
+		out_d[["z"]] = as.numeric(as.character(in_df$z))
+		out_d[["r"]] = r
+		out_d[["p"]] = p
+		out_d[["dim"]] = dim
+
+		processed_maps[[i]] <- out_d
 	}
 
 	cmd <- "julia -e \'using Hotspot; z = Hotspot.hsmap_from_json(\"test.json\"); f = open(\"out.json\",\"w\"); write(f, z); close(f);\'"

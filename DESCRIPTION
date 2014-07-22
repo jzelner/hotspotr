@@ -2,7 +2,8 @@ Package: hotspotr
 Title: Tools for hotspot analysis in R
 Description: 
 Imports:
-    ggplot2
+    ggplot2,
+    rjson
 Version: 0.01
 Author: Jon Zelner <jon@jonzelner.net>
 Maintainer: Jon Zelner <jon@jonzelner.net>
