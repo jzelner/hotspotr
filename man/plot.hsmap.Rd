@@ -3,8 +3,9 @@
 \alias{plot.hsmap}
 \title{plot.hsmap}
 \usage{
-\method{plot}{hsmap}(x, point = TRUE, pointtype = c(20, 3),
-  xlab = "Longitude", ylab = "Latitude", map = NULL, fname = NULL)
+\method{plot}{hsmap}(x, point = TRUE, caseonly = FALSE, pointtype = c(20,
+  3), xlab = "Longitude", ylab = "Latitude", map = NULL, fname = NULL,
+  rawscore = FALSE)
 }
 \arguments{
 \item{x}{object of type hsmap}

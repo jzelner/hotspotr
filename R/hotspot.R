@@ -10,7 +10,7 @@ hsmap <- function(levels, colors, points) {
 #'
 #' @param x object of type hsmap
 #' @export
-plot.hsmap <- function(x, point = TRUE, caseonly = FALSE, pointtype = c(20, 3), xlab = "Longitude", ylab = "Latitude", map = NULL, fname = NULL) {
+plot.hsmap <- function(x, point = TRUE, caseonly = FALSE, pointtype = c(20, 3), xlab = "Longitude", ylab = "Latitude", map = NULL, fname = NULL, rawscore = FALSE, threshhold = 0.0) {
 
 	if (!is.null(map)) {
 		g <- map
@@ -22,6 +22,10 @@ plot.hsmap <- function(x, point = TRUE, caseonly = FALSE, pointtype = c(20, 3), 
 	if (point == TRUE) {
 
 		point_df <- data.frame(x = x$points$x, y = x$points$y, z = as.factor(x$points$z), size = 1)
+		if (threshhold > 0.0) {
+			point_df <- subset(cluster_points(x, threshhold), in_cluster == 1)
+			point_df$z = as.factor(point_df$z)
+		}
 
 		if (caseonly == TRUE) {
 			point_df <- subset(point_df, z == 1)
@@ -30,7 +34,12 @@ plot.hsmap <- function(x, point = TRUE, caseonly = FALSE, pointtype = c(20, 3), 
 	}
 
 
-	g <- g + geom_tile(aes(x =x, y = y, fill = score, alpha = 0.01), data = x$levels) + scale_fill_manual(values = x$colors) + xlab(xlab) + ylab(xlab)
+	if (rawscore == FALSE) {
+		g <- g + geom_tile(aes(x =x, y = y, fill = score, alpha = 0.01), data = x$levels) + scale_fill_manual(values = x$colors) 
+	} else {
+		g <- g + geom_tile(aes(x =x, y = y, fill = raw_score, alpha = 0.01), data = x$levels) + scale_fill_gradient(low="blue", high="red")
+	}
+	g <- g + xlab(xlab) + ylab(xlab)
 
 
 	g <- g + theme(axis.line=element_blank(),
@@ -63,12 +72,35 @@ get_colorscale <- function(low_colors = c("blue4", "blue3"), high_colors = c("re
 	return(all_colors)
 }
 
+# get_score_percentile <- function(scoredist, scores) {
+# 	d <- ecdf(scoredist)
+# 	rawd <- ecdf(scores)
+# 	xp <- round(d(scores),2)
+# 	p <- xp
+# 	middle_indices <- xp > 0.05 & xp < 0.95
+# 	p[middle_indices] <- round(((rawd(scores[middle_indices])*0.9)+0.05),2)
+# 	p[p == 0] <- 0.01
+# 	return(p)
+# }
+
+# get_score_percentile <- function(scoredist, scores) {
+# 	d <- ecdf(scoredist)
+# 	rawd <- ecdf(scores)
+# 	p <- round(rawd(scores),2)
+# 	xp <- round(d(scores),2)
+# 	p <- round((p*0.9)+0.05,2)
+# 	p[xp < 0.05 | xp > 0.95] <- xp[xp < 0.05 | xp > 0.95]
+# 	p[p == 0] <- 0.01
+# 	return(p)
+# }
+
 get_score_percentile <- function(scoredist, scores) {
 	d <- ecdf(scoredist)
 	p <- round(d(scores),2)
 	p[p == 0] <- 0.01
 	return(p)
 }
+
 
 make_hsmap <- function(data_df, scores, in_df) {
 
@@ -77,6 +109,7 @@ make_hsmap <- function(data_df, scores, in_df) {
 		pval <- get_score_percentile(scores, data_df$score)
 
 		data_df$pval <- pval
+		data_df$raw_score <- data_df$score
 		data_df$score <- as.factor(pval)
 
 		included_colors <- cs[sort(unique(pval*100))]
@@ -256,17 +289,28 @@ random_hotspot <- function(x,y, h2, in_p, out_p) {
 
 }
 
-#' Given a map with a single hotspot, extract the squares with an approximate p-value
-#' greater than or equal to a given threshhold
+#' hotspot_cases
+#'
+#' @export
+hotspot_cases <- function(x, cutoff = 0.95) UseMethod("hotspot_cases")
+
+
+#' hotspot_area.hsmap
+#'
+#' Given a map with a single hotspot, extract the squares with a score
+#' greater than or equal to a given threshhold relative to the distribution of
+#' resampled maps
 #'
 #' @param df color dataframe output from make_hotspot
 #' @param datad data frame containing data points
 #' @param pv threshhold p-value
 #' @export
-hotspot_area <- function(df, datad, pv) {
+hotspot_cases.hsmap <- function(x, cutoff) {
+	df <- x$levels
+	datad <- x$points
 	case_indices <- c()
 	all_indices <- 1:nrow(datad)
-	hs_rows <- subset(df, pval >= pv)
+	hs_rows <- subset(df, pval >= cutoff)
 	#Scan across unique y values
 	y_vals <- sort(unique(hs_rows$y))
 	for (i in 1:(length(y_vals)-1)) {

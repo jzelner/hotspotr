@@ -268,8 +268,8 @@ point_index <-function(x,y, grid_x, grid_y) {
 
 	xwidth <- gx[2]-gx[1]
 	ywidth <- gy[2]-gy[1]
-	xindex <- floor((x-mx) / xwidth) + 1
-	yindex <- floor((y-my) / ywidth) + 1
+	xindex <- floor((x-mx + (xwidth/2)) / xwidth) + 1
+	yindex <- floor((y-my + (ywidth/2)) / ywidth) + 1
 	row <- ((xindex-1)*xspacing)+yindex
 	return(list(x = xindex, y = yindex, row = row))
 }
